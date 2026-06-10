@@ -19,3 +19,7 @@ node_modules/
 .DS_Store
 *.pem
 npm-debug.log*
+
+# Landing Fiat Rotter (proyecto aparte, no es parte del dashboard)
+/index.html
+/fiatrotter_backup.html

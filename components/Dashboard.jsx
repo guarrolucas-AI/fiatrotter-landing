@@ -153,7 +153,7 @@ function ProjectionCard({ daily, range }) {
 
 // ─── Sección Leads por Sucursal ───────────────────────────────────────────────
 
-function SucursalSection({ sucursales }) {
+function SucursalSection({ sucursales, daily }) {
   if (!sucursales || sucursales.length === 0) {
     return (
       <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-5 text-yellow-800 text-sm">
@@ -161,24 +161,46 @@ function SucursalSection({ sucursales }) {
       </div>
     );
   }
-  const maxLeads = Math.max(...sucursales.map(s => s.leads));
+
+  // Mismo criterio que ProjectionCard: promedio diario × días del mes
+  let projFactor = null;
+  if (daily && daily.length > 0) {
+    const daysElapsed = daily.length;
+    const lastDate    = daily[daily.length - 1]?.date;
+    const ref         = lastDate ? new Date(lastDate + 'T00:00:00') : new Date();
+    const daysInMonth = new Date(ref.getFullYear(), ref.getMonth() + 1, 0).getDate();
+    projFactor = daysInMonth / daysElapsed;
+  }
+
+  const rows = sucursales.map(s => {
+    const projLeads = projFactor !== null ? Math.round(s.leads * projFactor) : null;
+    return {
+      ...s,
+      projLeads,
+      projSpend: projFactor !== null ? Math.round(s.spend * projFactor) : null,
+      projResto: projLeads !== null ? Math.max(projLeads - s.leads, 0) : 0,
+    };
+  });
+
+  const maxLeads = Math.max(...rows.map(s => s.leads));
   const COLORS   = ['#E91E8C', '#9C27B0', '#2196F3', '#00BCD4', '#4CAF50'];
 
   return (
     <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100">
-      <SectionHeader title="Leads por Sucursal — WhatsApp" subtitle="Nivel conjunto de anuncios · mes actual" />
+      <SectionHeader title="Leads por Sucursal — WhatsApp" subtitle="Nivel conjunto de anuncios · mes actual · proyección a fin de mes" />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Tabla */}
         <div>
-          <div className="grid grid-cols-4 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-2">
+          <div className="grid grid-cols-5 text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-2">
             <span className="col-span-2">Sucursal (Supervisor)</span>
             <span className="text-right">Leads</span>
+            <span className="text-right">Proy. Mes</span>
             <span className="text-right">CPL</span>
           </div>
           <div className="space-y-2">
-            {sucursales.map((s, i) => (
-              <div key={s.sucursal} className="grid grid-cols-4 items-center bg-gray-50 rounded-xl px-3 py-2">
+            {rows.map((s, i) => (
+              <div key={s.sucursal} className="grid grid-cols-5 items-center bg-gray-50 rounded-xl px-3 py-2">
                 <div className="col-span-2">
                   <div className="font-semibold text-sm text-gray-800">{s.sucursal}</div>
                   <div className="text-xs text-gray-400">({s.supervisor})</div>
@@ -192,6 +214,11 @@ function SucursalSection({ sucursales }) {
                     />
                   </div>
                 </div>
+                <div className="text-right">
+                  <span className="font-bold" style={{ color: '#003B5C' }}>
+                    {s.projLeads !== null ? `≈${fmtNum(s.projLeads)}` : '—'}
+                  </span>
+                </div>
                 <div className="text-right text-sm text-gray-600">{fmtCurrency(s.cpl)}</div>
               </div>
             ))}
@@ -199,38 +226,56 @@ function SucursalSection({ sucursales }) {
         </div>
 
         {/* Gráfico de barras */}
-        <ResponsiveContainer width="100%" height={220}>
-          <ComposedChart data={sucursales} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" horizontal={false} />
-            <XAxis type="number" tick={{ fontSize: 10 }} />
-            <YAxis
-              type="category"
-              dataKey="sucursal"
-              tick={{ fontSize: 10 }}
-              width={90}
-            />
-            <Tooltip
-              content={({ active, payload }) => {
-                if (!active || !payload?.length) return null;
-                const d = payload[0]?.payload;
-                if (!d) return null;
-                return (
-                  <div className="bg-white rounded-lg shadow-lg p-3 border border-gray-100 text-xs">
-                    <p className="font-bold text-gray-700 mb-1">{d.sucursal}</p>
-                    <p className="text-gray-600">Leads: <strong>{fmtNum(d.leads)}</strong></p>
-                    <p className="text-gray-600">Gasto: <strong>{fmtCurrency(d.spend)}</strong></p>
-                    <p className="text-gray-600">CPL: <strong>{fmtCurrency(d.cpl)}</strong></p>
-                  </div>
-                );
-              }}
-            />
-            <Bar dataKey="leads" name="Leads" radius={[0, 4, 4, 0]}>
-              {sucursales.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-              ))}
-            </Bar>
-          </ComposedChart>
-        </ResponsiveContainer>
+        <div>
+          <ResponsiveContainer width="100%" height={220}>
+            <ComposedChart data={rows} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 10 }} />
+              <YAxis
+                type="category"
+                dataKey="sucursal"
+                tick={{ fontSize: 10 }}
+                width={90}
+              />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0]?.payload;
+                  if (!d) return null;
+                  return (
+                    <div className="bg-white rounded-lg shadow-lg p-3 border border-gray-100 text-xs">
+                      <p className="font-bold text-gray-700 mb-1">{d.sucursal}</p>
+                      <p className="text-gray-600">Leads: <strong>{fmtNum(d.leads)}</strong></p>
+                      {d.projLeads !== null && (
+                        <p className="text-gray-600">Proyección mes: <strong>≈{fmtNum(d.projLeads)}</strong></p>
+                      )}
+                      <p className="text-gray-600">Gasto: <strong>{fmtCurrency(d.spend)}</strong></p>
+                      {d.projSpend !== null && (
+                        <p className="text-gray-600">Gasto proyectado: <strong>≈{fmtCurrency(d.projSpend)}</strong></p>
+                      )}
+                      <p className="text-gray-600">CPL: <strong>{fmtCurrency(d.cpl)}</strong></p>
+                    </div>
+                  );
+                }}
+              />
+              <Bar dataKey="leads" name="Leads" stackId="total">
+                {rows.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Bar>
+              <Bar dataKey="projResto" name="Proyección" stackId="total" radius={[0, 4, 4, 0]}>
+                {rows.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} fillOpacity={0.25} />
+                ))}
+              </Bar>
+            </ComposedChart>
+          </ResponsiveContainer>
+          {projFactor !== null && (
+            <p className="text-xs text-gray-400 text-center mt-1">
+              Barra sólida: leads actuales · Barra clara: proyección a fin de mes
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -359,7 +404,7 @@ function FacebookSection({ metaData, variations }) {
       </div>
 
       {/* ── Leads por Sucursal ── */}
-      <SucursalSection sucursales={sucursales} />
+      <SucursalSection sucursales={sucursales} daily={daily} />
     </div>
   );
 }
