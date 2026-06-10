@@ -1,6 +1,5 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/a0010876/public_html/
-    - /bin/cp index.html $DEPLOYPATH
-    - /bin/cp pilot-proxy.php $DEPLOYPATH
+    - /bin/cp index.html /home/a0010876/public_html/index.html
+    - /bin/cp pilot-proxy.php /home/a0010876/public_html/pilot-proxy.php
