@@ -21,5 +21,3 @@ node_modules/
 npm-debug.log*
 
 # Landing Fiat Rotter (proyecto aparte, no es parte del dashboard)
-/index.html
-/fiatrotter_backup.html
