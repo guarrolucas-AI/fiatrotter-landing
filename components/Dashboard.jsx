@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
+import MetaAgent from './MetaAgent';
 import {
   ComposedChart,
   Bar,
@@ -485,6 +486,7 @@ function Header({ range }) {
 const TABS = [
   { id: 'facebook', label: 'Facebook Ads', icon: '📘' },
   { id: 'google', label: 'Google Ads', icon: '🔵' },
+  { id: 'agente', label: 'IA Estratega', icon: '✦' },
 ];
 
 // ─── Dashboard principal ──────────────────────────────────────────────────────
@@ -532,6 +534,9 @@ export default function Dashboard({ metaData, variations }) {
           <FacebookSection metaData={metaData} variations={variations} />
         )}
         {activeTab === 'google' && <GoogleSection />}
+        {activeTab === 'agente' && (
+          <MetaAgent metaData={metaData} variations={variations} />
+        )}
       </main>
 
       <footer className="text-center py-4 text-xs text-gray-400 border-t border-gray-100 bg-white">
